@@ -40,8 +40,9 @@ def welcome():
     return (
         f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
-        f"/api/v1.0/stations"
-        f"/api/v1.0/waihee_rain"
+        f"/api/v1.0/stations<br/>"
+        f"/api/v1.0/waihee_rain<br/>"
+        f"/api/v1.0/<start><br/>"
     )
 
 
@@ -123,6 +124,42 @@ def waihee():
         all_waihee.append(waihee_dict)
 
     return jsonify(all_waihee)
+
+
+@app.route("/api/v1.0/<start>")
+def weather_start(start):
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+    """minimum temperature, the average temperature, and the max temperature for a given start range, or a 404 if not."""
+    
+    results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
+    filter(Measurement.date >= start).\
+    group_by(Measurement.date).all()
+    
+
+    session.close()
+
+    canonicalized = start.replace(" ", "")
+    all_dates=[]
+    for TMIN, TAVE, TMAX in results:
+        search_term = Measurement.date
+        if search_term == canonicalized:
+            TMIN, TAVE, TMAX = results
+            start_dict = {}
+            start_dict["min_temp"] = TMIN
+            start_dict["ave_temp"] = TAVE
+            start_dict["max_temp"] = TMAX
+
+            all_dates.append(start_dict)
+
+            return jsonify(start_dict)
+
+        return jsonify({"error": f"Dates not found"})
+
+
+
+
+
 
 
 
